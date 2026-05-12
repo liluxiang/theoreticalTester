@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>人工智能训练师理论题训练</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --text: #172b4d;
+      --muted: #6b778c;
+      --success: #1f8a70;
+      --danger: #d64550;
+      --warning: #f6a623;
+      --border: #d9e2ec;
+      --primary: #3b82f6;
+    }
+    /* Prevent mobile browsers from auto-scaling text and improve touch behavior */
+    html { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    @media (max-width: 720px) {
+      .controls { flex-direction: column; }
+      .question-header { flex-direction: column; }
+      .page { padding: 12px; }
+      /* Allow normal document flow on small screens so content scrolls naturally */
+      #nonQuizArea, #quizArea { position: static; inset: auto; padding: 12px; }
+      #quizArea .quiz-wrapper { width: 100%; max-height: none; overflow: visible; }
+      .modal-card { padding: 18px; }
+      /* Make mode modal fit narrow screens */
+      #modeModal .modal-card { width: calc(100% - 32px); }
+      .question-card { padding: 12px; border-radius: 12px; }
+      .question-header h3 { font-size: 0.95rem; }
+      .options { gap: 8px; }
+      .option { padding: 10px; gap: 10px; font-size: 14px; white-space: normal; word-break: break-word; display:flex; align-items:flex-start; flex-wrap:wrap; }
+      .option input { transform: scale(1.05); margin-top: 2px; }
+      /* Only buttons explicitly marked with .full-mobile become full-width on small screens */
+      .controls .btn.full-mobile { width: 100%;}
+      /* Ensure section tabs keep compact layout */
+      #sectionTabs .controls { flex-direction: row !important; align-items: center; gap: 8px; }
+      #sectionTabs .controls .btn { width: auto; display: inline-flex; padding: 8px 12px; border-radius: 999px; }
+      #sectionTabs .controls .btn.btn-reset { align-self: center; }
+      .index-viewport { padding-bottom: 8px; }
+      .index-cell { width: 34px; height: 34px; }
+    }
+    /* Restore padding, gap and rounded corners for control buttons so
+       pagination and small action buttons keep a consistent, pleasant look */
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 12px; }
+    .controls .btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 12px; }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(59, 130, 246, .18); }
+    .btn-primary { background: var(--primary); color: #fff; border: 0;}
+    .btn-secondary { background: #f8fafc; color: var(--text); border: 1px solid var(--border); border: 0;}
+    .btn-success { background: var(--success); color: #fff; ; border: 0;}
+    .btn-reset { background: #ffffff; color: var(--text); border: 1px solid var(--border); border: 0;}
+    .summary { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 12px; margin-top: 20px; }
+    .panel { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; }
+    .panel strong { display: block; font-size: 1.3rem; margin-bottom: 4px; }
+    .question-card { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 16px; margin-bottom: 14px; }
+    .question-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .question-header h3 { margin: 0; font-size: 1rem; }
+    .question-body { margin-top: 16px; }
+    .options { display: grid; gap: 10px; }
+    .option { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; border: 1px solid #dfe7ef; background: #f8fbff; cursor: pointer; transition: transform .12s ease; }
+    .option:hover { transform: translateY(-1px); }
+    .option input { accent-color: var(--primary); }
+    .feedback { margin-top: 12px; padding: 14px 16px; border-radius: 14px; font-size: .95rem; line-height: 1.6; }
+    .feedback.success { background: #ecfdf5; color: #166534; border: 1px solid #d1fae5; }
+    .feedback.danger { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .feedback.info { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .result-table { width: 100%; border-collapse: collapse; margin-top: 18px; }
+    .result-table th, .result-table td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    .result-table th { color: var(--muted); font-weight: 600; }
+    .badge { display: inline-flex; border-radius: 999px; padding: 6px 12px; font-size: .85rem; font-weight: 700; align-items: center; gap: 6px; }
+    .badge.correct { background: #ddf4e5; color: #166534; }
+    .badge.wrong { background: #fee2e2; color: #b91c1c; }
+    .badge.partial { background: #fef3c7; color: #92400e; }
+    .modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); display: grid; place-items: center; padding: 24px; z-index: 20; }
+    /* 宽度与页面一致，最大高度限制并可垂直滚动（不显示滚动条） */
+    .modal-card { position: relative; width: min(1080px, calc(100% - 48px)); background: #fff; border-radius: 20px; padding: 30px; box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18); max-height: calc(100vh - 80px); overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none; }
+    .modal-card::-webkit-scrollbar { display: none; height: 0; width: 0; }
+    .modal-close { position: fixed; top: 24px; right: 24px; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 8px; border: none; background: transparent; cursor: pointer; font-size: 18px; color: var(--muted); z-index: 40; }
+    .modal-close:hover { background: rgba(0,0,0,0.04); }
+    .modal-close:focus { outline: 2px solid rgba(59,130,246,0.25); }
+    /* 模式选择弹窗单独设置为更窄，便于与结果弹窗区分 */
+    #modeModal .modal-card { width: min(520px, calc(100% - 80px)); }
+    .modal-card h2 { margin-bottom: 14px; }
+    .mode-buttons { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+    .hidden { display: none !important; }
+     /* 非答题区域：页面垂直水平居中显示（初始展示）
+       使用 fixed 定位，确保与页面其他布局无关始终垂直居中 */
+     #nonQuizArea { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 2; }
+     #nonQuizArea .hero { max-width: 820px; width: 100%; }
+    /* #enterQuizBtn { margin-left: 8px; } */
+    /* 答题区居中：使 quiz 区域在视口内上下左右居中并可滚动 */
+    #quizArea { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 2; overflow: auto; }
+    #quizArea .quiz-wrapper { width: min(1080px, calc(100% - 48px)); max-height: calc(100vh - 48px); overflow-y: auto; }
+
+    /* 题号目录（横向滚动） */
+    .index-grid { margin:12px 0; }
+    .index-wrapper { display:flex; align-items:center; gap:8px; }
+    .index-viewport { overflow-x:auto; flex:1; scroll-behavior:smooth; -webkit-overflow-scrolling:touch; -ms-overflow-style: none; scrollbar-width: none; }
+    .index-viewport::-webkit-scrollbar { display: none; height: 0; }
+    .index-inner { display:flex; gap:8px; align-items:center; padding:4px 0; }
+    .index-cell { width:38px; height:38px; display:grid; place-items:center; border-radius:8px; background:#fff; border:1px solid var(--border); cursor:pointer; font-weight:700; flex:0 0 auto; }
+    .index-cell .index-num { display:block; }
+    .index-cell.unanswered { background:#ffffff; color:var(--text); }
+    .index-cell.correct { background:var(--success); color:#fff; }
+    .index-cell.wrong { background:#fee2e2; color:#b91c1c; }
+    .index-cell.answered { background:var(--primary); color:#fff; }
+    .index-cell.current .index-num { color: var(--danger); }
+    .index-left, .index-right { width:36px; height:36px; min-width:36px; display:grid; place-items:center; padding:0; border-radius:8px; }
+    .hint { color: var(--muted); margin-top: 4px; font-size: .95rem; }
+    .footer-note { color: var(--muted); margin-top: 26px; font-size: .95rem; }
+    
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div id="nonQuizArea">
+      <div class="hero">
+        <h1>人工智能训练师理论题训练</h1>
+        <p>页面提供两个答题模式：<strong>训练</strong>和<strong>模拟</strong>。训练模式会在选择答案后立即给出错误提示和正确答案，模拟模式则待提交后统一评分。</p>
+        <div class="controls">
+          <button class="btn btn-primary full-mobile" onclick="restart()">重新加载</button>
+          <button class="btn btn-secondary full-mobile" onclick="openModeModal()">切换模式</button>
+          <button id="enterQuizBtn" class="btn btn-primary full-mobile" onclick="enterQuiz()">进入答题</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="quizArea" class="hidden">
+      <div class="quiz-wrapper">
+        <div id="summaryPanel" class="summary"></div>
+        <div id="sectionTabs" class="controls" style="margin-top: 16px;"></div>
+        <div id="indexGrid" class="index-grid" aria-hidden="false"></div>
+        <div id="questionList"></div>
+        <div class="controls" style="margin-top: 18px;">
+          <button id="submitBtn" class="btn btn-success full-mobile" onclick="submitSectionAnswers(activeSection)" disabled>提交</button>
+          <button class="btn btn-reset full-mobile" onclick="resetAnswers()">清空选择</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="resultModal" class="modal hidden">
+      <div class="modal-card" role="dialog" aria-modal="true">
+        <button class="modal-close" aria-label="关闭" onclick="closeResultModal()">✕</button>
+        <div id="resultContent"></div>
+      </div>
+    </div>
+    <!-- <div class="footer-note">说明：本页面已使用题库数据渲染判断题与单选题，已排除 PDF 中的多选题。</div> -->
+  </div>
+
+  <div id="modeModal" class="modal">
+    <div class="modal-card">
+      <h2>请选择答题模式</h2>
+      <p>训练模式：每题选择后可立即获得答案反馈；模拟模式：提交后统一出分，不提前提示错误。</p>
+      <div class="mode-buttons">
+        <button class="btn btn-primary full-mobile" onclick="chooseMode('training')">训练</button>
+        <button class="btn btn-secondary full-mobile" onclick="chooseMode('simulation')">模拟</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="questions.js"></script>
+  <script>
+    const sections = [
+      { key: 'judgment', title: '判断题', questions: QUIZ_DATA.judgment },
+      { key: 'single', title: '单选题', questions: QUIZ_DATA.single }
+    ];
+    let activeSection = 'judgment';
+    let trainingMode = null; // null 表示尚未选择模式，选择后设为 true/false
+    const selections = {};
+    const currentIndices = { judgment: 0, single: 0 };
+    let inQuiz = false; // 当前是否处于答题界面
+    let hasEnteredQuiz = false; // 是否曾进入过答题，用于将按钮切换为“继续答题"
+
+    function shuffleArray(arr) {
+      const a = (arr || []).slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function normalizeAnswer(question) {
+      if (!question) return '';
+      if (question.type === 'judgment') return String(question.answer);
+      if (question.type === 'multiple') {
+        if (Array.isArray(question.answer)) return question.answer.map(s => String(s).trim()).sort().join(',');
+        if (typeof question.answer === 'string') return question.answer.split(/[,，\s]+/).filter(Boolean).map(s => s.trim()).sort().join(',');
+        return String(question.answer);
+      }
+      return question.answer;
+    }
+
+    function normalizeSelectionForCompare(question, sel) {
+      if (question.type === 'judgment') return String(sel);
+      if (question.type === 'multiple') {
+        const arr = Array.isArray(sel) ? sel.slice() : String(sel || '').split(/[,，\s]+/).filter(Boolean);
+        return arr.map(s => String(s).trim()).sort().join(',');
+      }
+      return sel;
+    }
+
+    function openModeModal() {
+      document.getElementById('modeModal').classList.remove('hidden');
+    }
+
+    function enterQuiz() {
+      const nonQuiz = document.getElementById('nonQuizArea');
+      const quiz = document.getElementById('quizArea');
+      if (nonQuiz) nonQuiz.classList.add('hidden');
+      if (quiz) quiz.classList.remove('hidden');
+      inQuiz = true;
+      hasEnteredQuiz = true;
+      // 进入答题后更新选项卡与题目渲染
+      renderSectionTabs();
+      renderQuestions();
+      renderIndexGrid();
+    }
+
+    function exitQuiz() {
+      if (!confirm('确认退出答题？将返回非答题页面。')) return;
+      const nonQuiz = document.getElementById('nonQuizArea');
+      const quiz = document.getElementById('quizArea');
+      if (quiz) quiz.classList.add('hidden');
+      if (nonQuiz) nonQuiz.classList.remove('hidden');
+      inQuiz = false;
+      const enterBtn = document.getElementById('enterQuizBtn');
+      if (enterBtn) enterBtn.textContent = '继续答题';
+      renderSectionTabs();
+    }
+
+    function chooseMode(mode) {
+      trainingMode = mode === 'training';
+      document.getElementById('modeModal').classList.add('hidden');
+      // 启用统一提交按钮并重新渲染题目（使输入可用）
+      const sb = document.getElementById('submitBtn');
+      if (sb) sb.disabled = false;
+
+      // 准备题库池（训练/模拟模式共用）
+      const poolJud = (QUIZ_DATA.judgment || []).slice();
+      const poolSingle = (QUIZ_DATA.single || []).slice();
+      const poolMultiple = Array.isArray(QUIZ_DATA.multiple) ? (QUIZ_DATA.multiple || []).slice() : [];
+
+      // 在模拟模式下随机抽题：判断题 20 道，单选题 70 道（仅单选，不包含多选）
+      if (!trainingMode) {
+        const pickJud = shuffleArray(poolJud).slice(0, Math.min(20, poolJud.length));
+        const pickChoice = shuffleArray(poolSingle).slice(0, Math.min(70, poolSingle.length));
+        const sj = sections.find(s => s.key === 'judgment');
+        const ss = sections.find(s => s.key === 'single');
+        if (sj) sj.questions = pickJud;
+        if (ss) ss.questions = pickChoice;
+      } else {
+        // 训练模式：使用题库中的全部单选题（排除多选题），默认打乱顺序
+        const pickSingle = shuffleArray(poolSingle);
+        const sj = sections.find(s => s.key === 'judgment');
+        const ss = sections.find(s => s.key === 'single');
+        if (sj) sj.questions = poolJud; // 训练模式保留判断题全部
+        if (ss) ss.questions = pickSingle; // 使用全部单选题
+      }
+
+      // 重置进度与答案
+      currentIndices.judgment = 0;
+      currentIndices.single = 0;
+      Object.keys(selections).forEach(k => delete selections[k]);
+
+      renderSectionTabs();
+      renderQuestions();
+      renderSummary();
+      // 选择模式后延迟进入答题，确保模态关闭和布局重排完成
+      setTimeout(() => enterQuiz(), 60);
+    }
+
+    function createElement(tag, props = {}, ...children) {
+      const el = document.createElement(tag);
+      Object.entries(props).forEach(([key, value]) => {
+        if (key === 'className') el.className = value;
+        else if (key === 'innerHTML') el.innerHTML = value;
+        else if (key.startsWith('on') && typeof value === 'function') el.addEventListener(key.slice(2).toLowerCase(), value);
+        else if (key in el) el[key] = value;
+        else el.setAttribute(key, value);
+      });
+      children.forEach(child => { if (child != null) el.append(child); });
+      return el;
+    }
+
+    function getCurrentSection() {
+      return sections.find(section => section.key === activeSection);
+    }
+
+    function getAllQuestions() {
+      return sections.flatMap(section => section.questions);
+    }
+
+    function renderSectionTabs() {
+      const container = document.getElementById('sectionTabs');
+      container.innerHTML = '';
+      const tabContainer = createElement('div', { className: 'controls' });
+      sections.forEach(section => {
+        const button = createElement('button', {
+          className: `btn ${section.key === activeSection ? 'btn-primary' : 'btn-secondary'}`,
+          onclick: () => {
+            activeSection = section.key;
+            renderSectionTabs();
+            renderQuestions();
+            renderSummary();
+          }
+        }, section.title);
+        tabContainer.appendChild(button);
+      });
+      // 使用一行布局，把选项卡放左侧，右侧保留退出答题按钮位置
+      const row = createElement('div', { style: 'display:flex; align-items:center; width:100%; gap:8px;' });
+      row.appendChild(tabContainer);
+      const spacer = createElement('div', { style: 'flex:1' });
+      row.appendChild(spacer);
+      if (inQuiz) {
+        const exitBtn = createElement('button', { className: 'btn btn-reset', onclick: () => exitQuiz() }, '退出答题');
+        row.appendChild(exitBtn);
+      }
+      container.appendChild(row);
+      // 更新统一提交按钮的文本以反映当前分区
+      const sb = document.getElementById('submitBtn');
+      if (sb) {
+        const cur = sections.find(s => s.key === activeSection);
+        sb.textContent = cur ? `提交` : '提交';
+      }
+    }
+
+    function renderIndexGrid() {
+      const grid = document.getElementById('indexGrid');
+      if (!grid) return;
+      grid.innerHTML = '';
+      const section = getCurrentSection();
+      if (!section || !section.questions) return;
+
+      const wrapper = createElement('div', { className: 'index-wrapper' });
+      const leftBtn = createElement('button', { className: 'btn btn-secondary index-left', title: '向左滚动' }, '◀');
+      const viewport = createElement('div', { className: 'index-viewport' });
+      const inner = createElement('div', { className: 'index-inner' });
+      const rightBtn = createElement('button', { className: 'btn btn-secondary index-right', title: '向右滚动' }, '▶');
+
+      viewport.appendChild(inner);
+      wrapper.appendChild(leftBtn);
+      wrapper.appendChild(viewport);
+      wrapper.appendChild(rightBtn);
+      grid.appendChild(wrapper);
+
+      // 计算每页显示数量与单元格宽度（默认每页显示 20 个）
+      const visibleCount = 20;
+      // 需要等元素插入后读取 viewport 宽度
+      const vpWidth = Math.max(200, viewport.clientWidth || (grid.clientWidth - 80));
+      const gap = 8; // 与 CSS 保持一致
+      const cellWidth = Math.max(28, Math.floor((vpWidth - gap * (visibleCount - 1)) / visibleCount));
+
+      section.questions.forEach((q, i) => {
+        const uid = `${section.key}-${q.id}`;
+        const cell = createElement('div', { className: 'index-cell unanswered', title: `第 ${i + 1} 题` });
+        const span = createElement('span', { className: 'index-num' }, `${i + 1}`);
+        cell.appendChild(span);
+        cell.style.width = `${cellWidth}px`;
+        const sel = selections[uid];
+        // 状态颜色
+        if (trainingMode === true) {
+          if (sel !== undefined && sel !== null && sel !== '') {
+            const normSel = normalizeSelectionForCompare(q, sel);
+            const normAns = normalizeAnswer(q);
+            if (normSel === normAns) cell.classList.add('correct');
+            else cell.classList.add('wrong');
+          } else {
+            cell.classList.add('unanswered');
+          }
+        } else if (trainingMode === false) {
+          if (sel !== undefined && sel !== null && sel !== '') cell.classList.add('answered');
+          else cell.classList.add('unanswered');
+        } else {
+          cell.classList.add('unanswered');
+        }
+        // 当前题标识
+        const curIdx = currentIndices[section.key] || 0;
+        if (i === curIdx) cell.classList.add('current');
+
+        cell.addEventListener('click', () => {
+          currentIndices[section.key] = i;
+          renderQuestions();
+        });
+        inner.appendChild(cell);
+      });
+
+      // 滚动量为单页宽度
+      const scrollAmount = (cellWidth + gap) * visibleCount;
+      leftBtn.addEventListener('click', () => { viewport.scrollBy({ left: -scrollAmount, behavior: 'smooth' }); });
+      rightBtn.addEventListener('click', () => { viewport.scrollBy({ left: scrollAmount, behavior: 'smooth' }); });
+
+      // 自动滚动到当前题目
+      setTimeout(() => {
+        const cur = inner.querySelector('.index-cell.current');
+        if (cur) cur.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }, 80);
+    }
+
+    function renderSummary() {
+      const panel = document.getElementById('summaryPanel');
+      panel.innerHTML = '';
+      const modeLabel = trainingMode === null ? '未选择' : (trainingMode ? '训练模式' : '模拟模式');
+      const allQuestions = getAllQuestions();
+      const answered = Object.keys(selections).length;
+      const currentSection = getCurrentSection();
+      const sectionAnswered = currentSection.questions.filter(q => selections.hasOwnProperty(`${currentSection.key}-${q.id}`)).length;
+
+      panel.appendChild(createPanel('当前模式', modeLabel, '训练模式下即时提示，模拟模式下提交后统一评分。'));
+      panel.appendChild(createPanel('当前分区', `${currentSection.title} (${sectionAnswered}/${currentSection.questions.length})`, '本分区当前已回答题数。'));
+      panel.appendChild(createPanel('题库总量', `${allQuestions.length} 题`, `共 ${sections.length} 类题型。`));
+      panel.appendChild(createPanel('已答题数', `${answered} / ${allQuestions.length}`, '已选择答案的题目数量。'));
+    }
+
+    function createPanel(title, value, hint) {
+      const card = createElement('div', { className: 'panel' });
+      card.appendChild(createElement('strong', {}, value));
+      card.appendChild(createElement('div', {}, title));
+      card.appendChild(createElement('div', { className: 'hint' }, hint));
+      return card;
+    }
+
+    function renderQuestions() {
+      const container = document.getElementById('questionList');
+      container.innerHTML = '';
+      const section = getCurrentSection();
+      if (!section || !section.questions || section.questions.length === 0) {
+        container.appendChild(createElement('div', { className: 'panel' }, '本分区暂无题目。'));
+        document.getElementById('indexGrid').innerHTML = '';
+        return;
+      }
+
+      const idx = currentIndices[section.key] || 0;
+      const question = section.questions[idx];
+      const uid = `${section.key}-${question.id}`;
+
+      const card = createElement('div', { className: 'question-card', id: `q${uid}` });
+      const header = createElement('div', { className: 'question-header' },
+        createElement('h3', {}, `第 ${idx + 1} 题：${question.text}`),
+        createElement('span', { className: 'badge info' }, question.type === 'judgment' ? '判断题' : (question.type === 'multiple' ? '多选题' : '单选题'))
+      );
+      const body = createElement('div', { className: 'question-body' });
+      const optionGroup = createElement('div', { className: 'options' });
+
+      if (question.type === 'judgment') {
+        ['正确', '错误'].forEach((labelText, optionIndex) => {
+          const optionId = `q${uid}_o${optionIndex}`;
+          const value = optionIndex === 0 ? 'true' : 'false';
+          const input = createElement('input', {
+            type: 'radio', id: optionId, name: `question-${uid}`, value,
+            checked: selections[uid] === value, disabled: trainingMode === null,
+            onchange: () => onSelectionChange(question, uid, value)
+          });
+          const label = createElement('label', { className: 'option', for: optionId }, input, labelText);
+          optionGroup.appendChild(label);
+        });
+      } else if (question.type === 'multiple') {
+        question.options.forEach(option => {
+          const optionId = `q${uid}_o${option.key}`;
+          const checked = selections[uid] ? String(selections[uid]).split(/[,，\s]+/).includes(option.key) : false;
+          const input = createElement('input', {
+            type: 'checkbox', id: optionId, name: `question-${uid}`, value: option.key,
+            checked, disabled: trainingMode === null,
+            onchange: (e) => onMultipleChange(question, uid, option.key, e.target.checked)
+          });
+          const label = createElement('label', { className: 'option', for: optionId }, input, `${option.key}. ${option.text}`);
+          optionGroup.appendChild(label);
+        });
+      } else {
+        question.options.forEach(option => {
+          const optionId = `q${uid}_o${option.key}`;
+          const input = createElement('input', {
+            type: 'radio', id: optionId, name: `question-${uid}`, value: option.key,
+            checked: selections[uid] === option.key, disabled: trainingMode === null,
+            onchange: () => onSelectionChange(question, uid, option.key)
+          });
+          const label = createElement('label', { className: 'option', for: optionId }, input, `${option.key}. ${option.text}`);
+          optionGroup.appendChild(label);
+        });
+      }
+
+      body.appendChild(optionGroup);
+      body.appendChild(createElement('div', { id: `feedback-${uid}` }));
+
+      // 导航按钮：上一题/下一题
+      const nav = createElement('div', { className: 'controls', style: 'margin-top:12px; gap:8px;' });
+      const prevBtn = createElement('button', { className: 'btn btn-secondary', onclick: () => goPrevQuestion() }, '上一题');
+      const nextBtn = createElement('button', { className: 'btn btn-primary', onclick: () => goNextQuestion() }, '下一题');
+      if (idx === 0) prevBtn.disabled = true;
+      if (idx >= section.questions.length - 1) nextBtn.disabled = true;
+      nav.appendChild(prevBtn);
+      nav.appendChild(nextBtn);
+      body.appendChild(nav);
+
+      card.appendChild(header);
+      card.appendChild(body);
+      container.appendChild(card);
+
+      // 显示已答信息或即时反馈（训练模式）
+      const feedbackEl = document.getElementById(`feedback-${uid}`);
+      if (selections[uid]) {
+        if (trainingMode) updateFeedback(question, selections[uid], uid);
+        else if (feedbackEl) feedbackEl.innerHTML = `<div class="feedback info">已作答：${answerText(question, selections[uid])}</div>`;
+      }
+
+      renderIndexGrid();
+    }
+
+    function onSelectionChange(question, uid, value) {
+      selections[uid] = value;
+      renderSummary();
+      renderIndexGrid();
+      if (trainingMode) {
+        updateFeedback(question, value, uid);
+      } else {
+        const fb = document.getElementById(`feedback-${uid}`);
+        if (fb) fb.innerHTML = `<div class="feedback info">已作答：${answerText(question, value)}</div>`;
+      }
+    }
+
+    function onMultipleChange(question, uid, optionKey, checked) {
+      const cur = selections[uid] ? String(selections[uid]).split(/[,，\s]+/).filter(Boolean) : [];
+      const idx = cur.indexOf(optionKey);
+      if (checked) {
+        if (idx === -1) cur.push(optionKey);
+      } else {
+        if (idx > -1) cur.splice(idx, 1);
+      }
+      cur.sort();
+      selections[uid] = cur.join(',');
+      renderSummary();
+      renderIndexGrid();
+      if (trainingMode) updateFeedback(question, selections[uid], uid);
+      else {
+        const fb = document.getElementById(`feedback-${uid}`);
+        if (fb) fb.innerHTML = `<div class="feedback info">已作答：${answerText(question, selections[uid])}</div>`;
+      }
+    }
+
+    function goPrevQuestion() {
+      const sec = getCurrentSection();
+      if (!sec) return;
+      const key = sec.key;
+      if ((currentIndices[key] || 0) > 0) {
+        currentIndices[key]--;
+        renderQuestions();
+        renderSummary();
+      }
+    }
+
+    function goNextQuestion() {
+      const sec = getCurrentSection();
+      if (!sec) return;
+      const key = sec.key;
+      if ((currentIndices[key] || 0) < sec.questions.length - 1) {
+        currentIndices[key]++;
+        renderQuestions();
+        renderSummary();
+      }
+    }
+
+    function answerText(question, value) {
+      if (question.type === 'judgment') {
+        return value === 'true' ? '正确' : '错误';
+      }
+      if (question.type === 'multiple' || String(value).includes(',')) {
+        const keys = String(value || '').split(/[,，\s]+/).filter(Boolean);
+        const parts = keys.map(k => {
+          const opt = question.options.find(item => item.key === k);
+          return opt ? `${k}. ${opt.text}` : k;
+        });
+        return parts.join('; ');
+      }
+      const option = question.options.find(item => item.key === value);
+      return option ? `${value}. ${option.text}` : value;
+    }
+
+    
+
+    function updateFeedback(question, selected, uid) {
+      const feedback = document.getElementById(`feedback-${uid}`);
+      if (!feedback) return;
+      if (!selected) {
+        feedback.innerHTML = '';
+        return;
+      }
+      const normalized = normalizeAnswer(question);
+      const selectedText = answerText(question, selected);
+      if (normalizeSelectionForCompare(question, selected) === normalized) {
+        feedback.innerHTML = '<div class="feedback success">当前选择正确。继续答题或提交查看总评。</div>';
+      } else {
+        const correctText = answerText(question, normalized);
+        feedback.innerHTML = `<div class="feedback danger">当前选择错误。正确答案：${correctText}</div>`;
+      }
+    }
+
+    function getEvaluation() {
+      return sections.flatMap(section => section.questions.map(question => {
+        const uid = `${section.key}-${question.id}`;
+        const selected = selections[uid];
+        const normalized = normalizeAnswer(question);
+        const isCorrect = normalizeSelectionForCompare(question, selected) === normalized;
+        return { question, selected, isCorrect, uid };
+      }));
+    }
+
+    // 按分区提交（判断题 / 单选题），并在弹窗中展示结果
+    function submitSectionAnswers(sectionKey) {
+      const section = sections.find(s => s.key === sectionKey);
+      if (!section) return;
+      const evaluations = section.questions.map((question, idx) => {
+        const uid = `${section.key}-${question.id}`;
+        const selected = selections[uid];
+        const normalized = normalizeAnswer(question);
+        const isCorrect = normalizeSelectionForCompare(question, selected) === normalized;
+        return { question, selected, isCorrect };
+      });
+      let rightCount = evaluations.filter(e => e.isCorrect).length;
+      const total = evaluations.length;
+      const wrongCount = total - rightCount;
+      const errorRate = ((wrongCount / total) * 100).toFixed(1);
+
+      const rows = evaluations.map((item, index) => {
+        const selectedLabel = item.selected ? answerText(item.question, item.selected) : '<span style="color:#6b7280;">未作答</span>';
+        const correctLabel = answerText(item.question, normalizeAnswer(item.question));
+        const badgeClass = item.isCorrect ? 'correct' : 'wrong';
+        const badgeLabel = item.isCorrect ? '正确' : '错误';
+        const detail = `<div style="margin-top:8px;color:#475569;">标准答案：${correctLabel}</div>`;
+        return `<tr>
+          <td>第 ${index + 1} 题</td>
+          <td>${selectedLabel}</td>
+          <td>${correctLabel}</td>
+          <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
+        </tr><tr><td colspan="4">${detail}</td></tr>`;
+      }).join('');
+
+      const html = `
+        <h2>${section.title} 答题结果</h2>
+        <div class="summary">
+          ${createResultCard('总题数', total)}
+          ${createResultCard('正确数', rightCount)}
+          ${createResultCard('错误率', errorRate + '%', '未作答题目视为错误')}
+        </div>
+        <table class="result-table">
+          <thead>
+            <tr><th>题号</th><th>你的选择</th><th>标准答案</th><th>判定</th></tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+      const modal = document.getElementById('resultModal');
+      const content = document.getElementById('resultContent');
+      if (content) content.innerHTML = html;
+      if (modal) modal.classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function closeResultModal() {
+      const modal = document.getElementById('resultModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function createResultCard(title, value, note = '') {
+      return `<div class="panel"><strong>${value}</strong><div>${title}</div><div class="hint">${note}</div></div>`;
+    }
+
+    function resetAnswers() {
+      Object.keys(selections).forEach(key => delete selections[key]);
+      sections.forEach(section => section.questions.forEach(question => {
+        const uid = `${section.key}-${question.id}`;
+        document.querySelectorAll(`#q${uid} input`).forEach(input => input.checked = false);
+        const feedback = document.getElementById(`feedback-${uid}`);
+        if (feedback) feedback.innerHTML = '';
+      }));
+      currentIndices.judgment = 0;
+      currentIndices.single = 0;
+      const rm = document.getElementById('resultModal');
+      if (rm) rm.classList.add('hidden');
+      renderIndexGrid();
+      renderQuestions();
+      renderSummary();
+    }
+
+    function restart() {
+      resetAnswers();
+      trainingMode = null;
+      // 禁用提交按钮，直到选择模式
+      const sb = document.getElementById('submitBtn');
+      if (sb) sb.disabled = true;
+      renderSectionTabs();
+      renderQuestions();
+      renderSummary();
+      document.getElementById('modeModal').classList.remove('hidden');
+    }
+
+    renderSectionTabs();
+    renderQuestions();
+    renderSummary();
+    // 页面加载时强制选择模式（弹窗），选择后才允许答题
+    openModeModal();
+  </script>
+</body>
+</html>
