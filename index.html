@@ -75,10 +75,10 @@
     .badge.partial { background: #fef3c7; color: #92400e; }
     .modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); display: grid; place-items: center; padding: 24px; z-index: 20; }
     /* 宽度与页面一致，最大高度限制并可垂直滚动（不显示滚动条） */
-    .modal-card { position: relative; width: min(1080px, calc(100% - 48px)); background: #fff; border-radius: 20px; padding: 30px; box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18); max-height: calc(100vh - 80px); overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none; }
+    .modal-card { position: relative; display: flex; flex-direction: column; width: min(1080px, calc(100% - 48px)); background: #fff; border-radius: 20px; padding: 30px; box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18); max-height: calc(100vh - 80px); overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none; }
     .modal-card::-webkit-scrollbar { display: none; height: 0; width: 0; }
-    .modal-close { position: fixed; top: 24px; right: 24px; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 8px; border: none; background: transparent; cursor: pointer; font-size: 18px; color: var(--muted); z-index: 40; }
-    .modal-close:hover { background: rgba(0,0,0,0.04); }
+    .modal-close { position: sticky; top: 0; align-self: flex-end; margin-right: 12px; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 8px; border: none; background: rgba(255,255,255,0.95); cursor: pointer; font-size: 18px; color: var(--muted); z-index: 60; box-shadow: 0 6px 18px rgba(2,6,23,0.12); }
+    .modal-close:hover { background: rgba(0,0,0,0.06); }
     .modal-close:focus { outline: 2px solid rgba(59,130,246,0.25); }
     /* 模式选择弹窗单独设置为更窄，便于与结果弹窗区分 */
     #modeModal .modal-card { width: min(520px, calc(100% - 80px)); }
